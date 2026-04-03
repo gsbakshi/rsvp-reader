@@ -1,4 +1,5 @@
 import * as vscode from 'vscode'
+import * as crypto from 'crypto'
 import * as fs from 'fs'
 import * as path from 'path'
 import { RsvpEngine } from './rsvpEngine'
@@ -6,7 +7,7 @@ import { parseMarkdown } from './mdParser'
 import type { Token, EngineState } from './rsvpEngine'
 
 function getNonce(): string {
-  return require('crypto').randomBytes(24).toString('base64url')
+  return crypto.randomBytes(24).toString('base64url')
 }
 
 export class RsvpPanel {

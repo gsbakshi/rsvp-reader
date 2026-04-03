@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import * as fs from 'fs'
+import * as os from 'os'
+import * as path from 'path'
 import * as tty from 'tty'
 import * as readline from 'readline'
 import { RsvpEngine } from './rsvpEngine'
@@ -83,7 +85,6 @@ function draw(
 }
 
 // ── State file for Claude Code / Codex status bar ────────────────────────────
-import * as os from 'os'
 const STATE_FILE = path.join(os.tmpdir(), `rsvp-state-${process.getuid?.() ?? 'default'}`)
 function writeState(s: string): void { try { fs.writeFileSync(STATE_FILE, s, { mode: 0o600 }) } catch {} }
 function clearState(): void          { try { fs.unlinkSync(STATE_FILE) } catch {} }

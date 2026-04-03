@@ -39,8 +39,10 @@ if command -v cmux &>/dev/null; then
   SURFACE=$(cmux new-split right 2>/dev/null | grep -oE 'surface:[0-9]+')
   if [ -n "$SURFACE" ]; then
     TMPFILE=$(mktemp /tmp/rsvp-msg.XXXXX)
+    chmod 600 "$TMPFILE"
     echo "$MSG" > "$TMPFILE"
-    cmux send --surface "$SURFACE" "cat '$TMPFILE' | '$RSVP' ${RSVP_ARGS[*]}; rm -f '$TMPFILE'"
+    QUOTED_ARGS=$(printf "'%s' " "${RSVP_ARGS[@]}")
+    cmux send --surface "$SURFACE" "cat '$TMPFILE' | '$RSVP' ${QUOTED_ARGS}; rm -f '$TMPFILE'"
     cmux send-key --surface "$SURFACE" Enter
     exit 0
   fi
