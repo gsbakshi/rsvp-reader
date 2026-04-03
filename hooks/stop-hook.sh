@@ -26,6 +26,11 @@ if [ -z "$MSG" ]; then
   exit 0
 fi
 
+WORD_COUNT=$(echo "$MSG" | wc -w | tr -d ' ')
+if [ "${WORD_COUNT:-0}" -le 30 ]; then
+  exit 0
+fi
+
 # Find rsvp binary (npm link puts it in PATH; fallback to repo location)
 if command -v rsvp &>/dev/null; then
   RSVP="$(command -v rsvp)"
