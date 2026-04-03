@@ -1,5 +1,7 @@
 # RSVP Reader
 
+> **Beta** — This project is in active development. Expect rapid releases, breaking changes, and incomplete features. Use it, break it, report it.
+
 Speed-read markdown files, selections, and AI responses using Rapid Serial Visual Presentation (RSVP). Works as a VS Code extension and a standalone CLI tool, with native cmux integration for auto-playing Claude Code and Codex CLI responses.
 
 ---
@@ -141,6 +143,36 @@ The CLI entry point (`src/cli.ts`) compiles to `out/cli.js` with a `#!/usr/bin/e
 
 ---
 
+## Roadmap
+
+We're moving fast. Here's what's coming:
+
+- **VS Code Marketplace** — official published extension (no manual install)
+- **cmux native plugin** — first-class cmux integration, no hook wiring required
+- **Claude Code & Codex CLI** — deeper integration beyond stop hooks
+- **Rust rewrite** — faster rendering, lower latency, single binary distribution
+- **Visualization research** — exploring alternatives to the current ORP/RSVP algorithm, including different reading acceleration techniques
+
+Follow this repo to track progress. Contributions that align with these directions are especially welcome.
+
+---
+
+## Contributing
+
+We want contributors, not forks. If you build something useful here, do it in the open so the whole community benefits.
+
+**Ground rules:**
+
+- **Never push directly to `main`.** Branch off, make your changes, open a PR.
+- **Open an issue first** for anything non-trivial — discuss the approach before writing code.
+- **One concern per PR.** Don't bundle unrelated fixes.
+- **PRs are reviewed carefully.** We move fast but we won't merge something we can't stand behind. Be patient — a slower merge is better than a broken release.
+- **Be respectful.** No gatekeeping, no dismissiveness. Everyone is here to learn and build.
+
+This project is licensed under GPL v3. Any derivative work you distribute must also be GPL v3. You may not incorporate this into a proprietary product and sell it without releasing your source under the same license.
+
+---
+
 ## Agent Setup Prompt
 
 If you're using an AI coding agent (Claude Code, Codex CLI, etc.), paste this prompt to have it set up RSVP Reader automatically:
@@ -169,4 +201,6 @@ Report what worked, what was already configured, and anything that needs manual 
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+GPL v3 — see [LICENSE](LICENSE)
+
+Free to use, modify, and distribute. Any derivative work must also be released under GPL v3. You may not incorporate this into a proprietary product without releasing your source under the same license.

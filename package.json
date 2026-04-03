@@ -3,6 +3,7 @@
   "displayName": "RSVP Reader",
   "description": "Speed-read markdown files and selections with RSVP",
   "version": "0.1.0",
+  "license": "GPL-3.0-only",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
   "activationEvents": [],
