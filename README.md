@@ -159,7 +159,9 @@ Follow this repo to track progress. Contributions that align with these directio
 
 ## Contributing
 
-We want contributors, not forks. If you build something useful here, do it in the open so the whole community benefits.
+This project is free and open — free as in freedom, free as in open. We built it in the open because that's the only way it gets better. We'd rather have ten people improve it together than ten people each maintain their own private version.
+
+If you build something useful here, do it in the open so the whole community benefits.
 
 **Ground rules:**
 
@@ -203,4 +205,4 @@ Report what worked, what was already configured, and anything that needs manual 
 
 GPL v3 — see [LICENSE](LICENSE)
 
-Free to use, modify, and distribute. Any derivative work must also be released under GPL v3. You may not incorporate this into a proprietary product without releasing your source under the same license.
+**Free as in freedom.** Use it, study it, change it, share it. That freedom is the point — not just a side effect. The GPL v3 license ensures that freedom is preserved downstream: any derivative work must remain open under the same terms. You cannot take this, close it, and sell it. The community that builds it should be the community that benefits from it.
