@@ -83,9 +83,10 @@ function draw(
 }
 
 // ── State file for Claude Code / Codex status bar ────────────────────────────
-const STATE_FILE = '/tmp/rsvp-state'
-function writeState(s: string): void { try { fs.writeFileSync(STATE_FILE, s) } catch {} }
-function clearState(): void          { try { fs.unlinkSync(STATE_FILE)       } catch {} }
+import * as os from 'os'
+const STATE_FILE = path.join(os.tmpdir(), `rsvp-state-${process.getuid?.() ?? 'default'}`)
+function writeState(s: string): void { try { fs.writeFileSync(STATE_FILE, s, { mode: 0o600 }) } catch {} }
+function clearState(): void          { try { fs.unlinkSync(STATE_FILE) } catch {} }
 
 // ── Read all of stdin before starting ────────────────────────────────────────
 function readStdin(): Promise<string> {

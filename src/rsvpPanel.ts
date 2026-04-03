@@ -6,8 +6,7 @@ import { parseMarkdown } from './mdParser'
 import type { Token, EngineState } from './rsvpEngine'
 
 function getNonce(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  return Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  return require('crypto').randomBytes(24).toString('base64url')
 }
 
 export class RsvpPanel {

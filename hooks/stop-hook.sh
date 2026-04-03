@@ -25,18 +25,26 @@ if [ -z "$MSG" ]; then
 fi
 
 # Find rsvp binary (npm link puts it in PATH; fallback to repo location)
-RSVP=$(command -v rsvp 2>/dev/null || echo "node $(dirname "$0")/../out/cli.js")
+if command -v rsvp &>/dev/null; then
+  RSVP="$(command -v rsvp)"
+  RSVP_ARGS=()
+else
+  RSVP="node"
+  RSVP_ARGS=("$(dirname "$0")/../out/cli.js")
+fi
 
 # Open a new cmux split for the RSVP pane and play the message.
 # If cmux is not available, fall back to playing in the current terminal.
 if command -v cmux &>/dev/null; then
-  # Send the message to a new right-hand split
-  SURFACE=$(cmux new-split right --json 2>/dev/null | jq -r '.surface_id // empty')
+  SURFACE=$(cmux new-split right 2>/dev/null | grep -oE 'surface:[0-9]+')
   if [ -n "$SURFACE" ]; then
-    echo "$MSG" | cmux send-surface --surface "$SURFACE" "$RSVP"
+    TMPFILE=$(mktemp /tmp/rsvp-msg.XXXXX)
+    echo "$MSG" > "$TMPFILE"
+    cmux send --surface "$SURFACE" "cat '$TMPFILE' | '$RSVP' ${RSVP_ARGS[*]}; rm -f '$TMPFILE'"
+    cmux send-key --surface "$SURFACE" Enter
     exit 0
   fi
 fi
 
 # Fallback: play inline (blocks until done or user quits)
-echo "$MSG" | $RSVP
+echo "$MSG" | "$RSVP" "${RSVP_ARGS[@]}"

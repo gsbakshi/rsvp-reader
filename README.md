@@ -66,19 +66,35 @@ rsvp --wpm=350 file.md    # custom speed
 
 ### cmux Auto-play
 
-When running inside [cmux](https://cmux.app), Claude Code and Codex CLI responses are automatically played after each turn (if >30 words). The RSVP panel opens as a right split within your current workspace pane and closes automatically when the next response arrives.
+When running inside [cmux](https://cmux.app), Claude Code and Codex CLI responses are automatically played after each turn (if >30 words). The RSVP panel opens as a right split of your current surface and closes automatically when the next response arrives.
 
 **Requirements:**
 - `rsvp` on PATH (`npm link`)
 - `cmux` installed and active
-- Claude Code hook registered in `~/.claude/settings.json`
-- `[features] codex_hooks = true` in `~/.codex/config.toml`
 
-The canonical hook scripts live in [`agent-config`](https://github.com/gsbakshi/agent-config) and are deployed via `sync.sh`:
+**Claude Code** — register the hook in `~/.claude/settings.json`:
 
+```json
+{
+  "hooks": {
+    "Stop": [{ "hooks": [{ "type": "command", "command": "/path/to/rsvp-reader/hooks/stop-hook.sh" }] }]
+  }
+}
 ```
-agent-config/canonical/cmux-notify.sh    → ~/.claude/hooks/cmux-notify.sh
-agent-config/canonical/codex-hooks.json  → ~/.codex/hooks.json
+
+**Codex CLI** — enable hooks in `~/.codex/config.toml` and register in `~/.codex/hooks.json`:
+
+```toml
+# ~/.codex/config.toml
+[features]
+codex_hooks = true
+```
+
+```json
+// ~/.codex/hooks.json
+{
+  "Stop": [{ "command": "/path/to/rsvp-reader/hooks/stop-hook.sh", "timeout": 60 }]
+}
 ```
 
 ---
