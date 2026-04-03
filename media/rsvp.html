@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'nonce-{{nonce}}'; script-src 'nonce-{{nonce}}';">
+  <title>RSVP Reader</title>
+  <style nonce="{{nonce}}">
+
+    /* ── Design Tokens ────────────────────────────────────────────── */
+    :root {
+      --color-surface:    var(--vscode-editor-background, #000);
+      --color-text:       var(--vscode-editor-foreground, #e0e0e0);
+      --color-text-dim:   var(--vscode-descriptionForeground, rgba(255,255,255,0.3));
+      --color-accent:     var(--vscode-terminal-ansiRed, #f14c4c);
+      --color-rule:       var(--vscode-editorWidget-border, rgba(255,255,255,0.12));
+      --color-focus-ring: var(--vscode-focusBorder);
+      --font:             var(--vscode-editor-font-family, 'Courier New', monospace);
+      --word-font-size:   3.0rem;
+    }
+
+    /* ── Reset ────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Shell ────────────────────────────────────────────────────── */
+    body {
+      height: 100vh;
+      display: flex;
+      align-items: stretch;
+      background: var(--color-surface);
+      color: var(--color-text);
+      font-family: var(--font);
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #reader {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Spacers — push bands to vertical center ───────────────────── */
+    #spacer-top    { flex: 1.4; }
+    #spacer-bottom { flex: 1; }
+
+    /* ── Word count — sits above the top rule ──────────────────────── */
+    #word-count {
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--color-text-dim);
+      letter-spacing: 0.08em;
+      padding-bottom: 1.25rem;
+      opacity: 0;
+      transition: opacity 300ms ease;
+    }
+    #word-count.visible { opacity: 1; }
+
+    /* ── Bands (two horizontal rules) ─────────────────────────────── */
+    .band {
+      position: relative;
+      width: 100%;
+      height: 1px;
+      background: var(--color-rule);
+    }
+
+    /* Progress fills the bottom band left-to-right */
+    #band-bottom::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      height: 100%;
+      width: var(--progress, 0%);
+      background: var(--color-accent);
+      transition: width 80ms linear;
+    }
+
+    /* Expanded hit area for seek clicks — ::after so ::before stays for progress */
+    #band-bottom {
+      cursor: pointer;
+    }
+    #band-bottom::after {
+      content: '';
+      position: absolute;
+      left: 0; top: -6px;
+      width: 100%; height: 13px;
+    }
+
+    /* ORP tick marks — extend inward at horizontal center */
+    .tick {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1px;
+      height: 0.5rem;
+      background: var(--color-accent);
+      opacity: 0.7;
+    }
+    #band-top    .tick { bottom: 0; }
+    #band-bottom .tick { top: 0; }
+
+    /* WPM label — bottom-right of the bottom band */
+    #wpm-corner {
+      position: absolute;
+      right: 1.25rem;
+      top: 0.4rem;
+      font-size: 0.68rem;
+      color: var(--color-text-dim);
+      letter-spacing: 0.04em;
+      font-style: italic;
+    }
+
+    /* ── Word zone ─────────────────────────────────────────────────── */
+    #word-zone {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(var(--word-font-size) * 2.2);
+    }
+
+    /* ORP alignment handled in JS — offsetLeft measurement after each
+       replaceChildren, then translateX to center ORP on tick marks.
+       CSS ch-unit math is font-dependent and unreliable across themes. */
+    #word-display {
+      position: relative; /* makes it offsetParent for child spans */
+      display: flex;
+      align-items: baseline;
+      font-size: var(--word-font-size);
+      line-height: 1;
+      white-space: pre;
+      letter-spacing: 0.03em;
+      font-weight: 300;
+    }
+
+    .w-orp {
+      color: var(--color-accent);
+      font-weight: 500;
+    }
+
+    /* Onboarding hint — small, dim, centered */
+    .w-hint {
+      font-size: 0.75rem;
+      color: var(--color-text-dim);
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      font-weight: 300;
+    }
+
+    /* Phosphor flash on each new word */
+    @keyframes phosphor {
+      from { opacity: 0.6; }
+      to   { opacity: 1; }
+    }
+    #word-display.flash { animation: phosphor 55ms ease-out forwards; }
+
+    /* Idle cursor blink */
+    #idle-cursor {
+      display: inline-block;
+      width: 0.5em;
+      height: var(--word-font-size);
+      background: var(--color-accent);
+      opacity: 0.35;
+      animation: blink 1.1s step-end infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 0.35; }
+      50%       { opacity: 0; }
+    }
+
+    /* ── Controls ───────────────────────────────────────────────────── */
+    #controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.75rem 1.25rem 1.25rem;
+    }
+
+    .ctrl-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .ctrl-sep {
+      width: 1px;
+      height: 0.9rem;
+      background: var(--color-rule);
+      margin: 0 0.2rem;
+    }
+
+    .btn {
+      padding: 0.3rem 0.65rem;
+      background: transparent;
+      color: var(--color-text-dim);
+      border: 1px solid transparent;
+      border-radius: 0.125rem;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-family: var(--font);
+      letter-spacing: 0.04em;
+      opacity: 0.65;
+      transition: opacity 120ms ease, border-color 120ms ease;
+    }
+    .btn:hover        { opacity: 1; border-color: var(--color-rule); }
+    .btn:active       { opacity: 0.7; }
+    .btn:focus-visible {
+      outline: 1px solid var(--color-focus-ring);
+      outline-offset: 2px;
+      opacity: 1;
+    }
+    .btn:disabled     { opacity: 0.2; cursor: not-allowed; }
+
+    /* Fixed widths for buttons whose text content changes at runtime */
+    #btn-play { min-width: 4.5rem; }
+
+    /* Highlighted state for active preset / skim mode */
+    .btn.active {
+      opacity: 1;
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+
+    /* WPM slider group */
+    #wpm-group {
+      display: flex;
+      align-items: center;
+      margin: 0 0.4rem;
+      opacity: 0.65;
+      transition: opacity 120ms ease;
+    }
+    #wpm-group:hover { opacity: 1; }
+
+    #wpm-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 4.5rem;
+      height: 1px;
+      background: var(--color-rule);
+      border-radius: 0;
+      cursor: pointer;
+      outline: none;
+    }
+    #wpm-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+      background: var(--color-text-dim);
+      border: none;
+      cursor: pointer;
+    }
+    #wpm-slider:focus-visible {
+      outline: 1px solid var(--color-focus-ring);
+      border-radius: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="reader">
+
+    <div id="spacer-top"></div>
+
+    <div id="word-count" aria-live="polite"></div>
+
+    <div class="band" id="band-top">
+      <span class="tick" aria-hidden="true"></span>
+    </div>
+
+    <div id="word-zone">
+      <div id="word-display" role="status" aria-live="off"></div>
+    </div>
+
+    <div class="band" id="band-bottom">
+      <span class="tick" aria-hidden="true"></span>
+      <span id="wpm-corner" aria-live="polite">250 wpm</span>
+    </div>
+
+    <div id="spacer-bottom"></div>
+
+    <div id="controls">
+
+      <!-- Navigation row -->
+      <div class="ctrl-row">
+        <button class="btn" id="btn-back-sentence" title="Back to sentence start (Shift+←)" disabled>← sent</button>
+        <button class="btn" id="btn-back"          title="Back words (←)"                   disabled>← 5 words</button>
+        <button class="btn" id="btn-play"          title="Play / Pause (Space)"              disabled>▶ play</button>
+        <button class="btn" id="btn-forward"       title="Forward words (→)"                 disabled>5 words →</button>
+      </div>
+
+      <!-- Speed row -->
+      <div class="ctrl-row">
+        <button class="btn" id="btn-250" title="250 wpm" disabled>250</button>
+        <button class="btn" id="btn-400" title="400 wpm" disabled>400</button>
+        <button class="btn" id="btn-600" title="600 wpm" disabled>600</button>
+        <div class="ctrl-sep" aria-hidden="true"></div>
+        <div id="wpm-group">
+          <input id="wpm-slider" type="range" min="100" max="800" step="25" value="250"
+                 aria-label="Words per minute">
+        </div>
+      </div>
+
+      <!-- Display row — always active, no disable needed -->
+      <div class="ctrl-row">
+        <button class="btn" id="btn-font-down" title="Smaller text">Aa−</button>
+        <button class="btn" id="btn-font-up"   title="Larger text">Aa+</button>
+        <div class="ctrl-sep" aria-hidden="true"></div>
+        <button class="btn" id="btn-mode"      title="Toggle skim mode (1.5× speed)">read</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script nonce="{{nonce}}">
+    const vscode = acquireVsCodeApi()
+
+    const bandBottom  = document.getElementById('band-bottom')
+    const wordDisp    = document.getElementById('word-display')
+    const wordCount   = document.getElementById('word-count')
+    const wpmCorner   = document.getElementById('wpm-corner')
+    const btnPlay     = document.getElementById('btn-play')
+    const btnBack     = document.getElementById('btn-back')
+    const btnBackSent = document.getElementById('btn-back-sentence')
+    const btnForward  = document.getElementById('btn-forward')
+    const btn250      = document.getElementById('btn-250')
+    const btn400      = document.getElementById('btn-400')
+    const btn600      = document.getElementById('btn-600')
+    const btnFontDn   = document.getElementById('btn-font-down')
+    const btnFontUp   = document.getElementById('btn-font-up')
+    const btnMode     = document.getElementById('btn-mode')
+    const slider      = document.getElementById('wpm-slider')
+
+    let playing    = false
+    let loaded     = false
+    let tokenTotal = 0
+    let fontSize   = 3.0   // rem
+    let baseWpm    = 250
+    let skimMode   = false
+
+    // Hold-to-freeze: tap Space = toggle play/pause; hold 200ms+ = freeze while held
+    let spaceTimer = null
+    let freezeHeld = false
+
+    // ─── ORP (Optimal Recognition Point) ────────────────────────────────
+    // Spritz-style table: n chars → highlight index (0-based), capped at 4
+    // n:  1  2  3  4  5  6  7  8  9 10 11 12 13+
+    const orpTable = [0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3]
+    function orpIndex(word) {
+      const n = word.length
+      return n < orpTable.length ? orpTable[n] : 4
+    }
+    // ────────────────────────────────────────────────────────────────────
+
+    function showOnboarding() {
+      wordDisp.style.transform = ''
+      const hint = document.createElement('span')
+      hint.className = 'w-hint'
+      hint.setAttribute('aria-label', 'Open a markdown file and right-click to RSVP Read File')
+      hint.textContent = 'open a .md file → right-click → RSVP: Read File'
+      wordDisp.replaceChildren(hint)
+    }
+
+    function showIdleCursor() {
+      wordDisp.style.transform = ''  // clear translateX from previous word
+      const cursor = document.createElement('span')
+      cursor.id = 'idle-cursor'
+      cursor.setAttribute('aria-hidden', 'true')
+      wordDisp.replaceChildren(cursor)
+    }
+
+    // Shift word-display so the ORP character's center sits at the zone's
+    // horizontal center. Uses real pixel measurements — ch-unit CSS math
+    // varies by font and is unreliable across VS Code themes.
+    function alignOrp() {
+      const orp = wordDisp.querySelector('.w-orp')
+      if (!orp) { wordDisp.style.transform = ''; return }
+      const shift = wordDisp.offsetWidth / 2 - (orp.offsetLeft + orp.offsetWidth / 2)
+      wordDisp.style.transform = `translateX(${shift}px)`
+    }
+
+    function showWord(word) {
+      if (!word) { showIdleCursor(); return }
+      const i    = orpIndex(word)
+      const pre  = document.createElement('span')
+      const orp  = document.createElement('span')
+      const post = document.createElement('span')
+      orp.className    = 'w-orp'
+      pre.textContent  = word.slice(0, i)
+      orp.textContent  = word[i] ?? ''
+      post.textContent = word.slice(i + 1)
+      wordDisp.replaceChildren(pre, orp, post)
+      alignOrp()  // pixel-perfect: measure after DOM update, before paint
+      wordDisp.classList.remove('flash')
+      void wordDisp.offsetWidth
+      wordDisp.classList.add('flash')
+    }
+
+    function syncPresetButtons(wpm) {
+      btn250.classList.toggle('active', wpm === 250)
+      btn400.classList.toggle('active', wpm === 400)
+      btn600.classList.toggle('active', wpm === 600)
+    }
+
+    function setWpm(val) {
+      const v = Math.max(100, Math.min(800, val))
+      slider.value = v
+      wpmCorner.textContent = v + ' wpm'
+      syncPresetButtons(v)
+      vscode.postMessage({ type: 'wpm', value: v })
+    }
+
+    function setFontSize(size) {
+      fontSize = Math.max(1.5, Math.min(5.0, Math.round(size * 10) / 10))
+      document.documentElement.style.setProperty('--word-font-size', fontSize + 'rem')
+      vscode.postMessage({ type: 'fontSize', value: fontSize })
+    }
+
+    function toggleMode() {
+      skimMode = !skimMode
+      btnMode.textContent = skimMode ? 'skim' : 'read'
+      btnMode.classList.toggle('active', skimMode)
+      // skim = 1.5× base rate; read = base rate
+      setWpm(skimMode ? Math.round(baseWpm * 1.5) : baseWpm)
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────
+    showOnboarding()
+
+    // ── Message handler ──────────────────────────────────────────────────
+    window.addEventListener('message', e => {
+      const msg = e.data
+
+      if (msg.type === 'token') {
+        showWord(msg.word)
+        const pct = (msg.progress * 100).toFixed(1)
+        bandBottom.style.setProperty('--progress', pct + '%')
+        if (tokenTotal > 0) {
+          wordCount.textContent = `word ${msg.index + 1} / ${tokenTotal}`
+        }
+
+      } else if (msg.type === 'state') {
+        playing = msg.state === 'playing'
+        btnPlay.textContent = playing ? '⏸ pause' : '▶ play'
+        if (msg.state === 'done') {
+          showIdleCursor()
+          wordCount.textContent = 'done  —  space to restart'
+          bandBottom.style.setProperty('--progress', '100%')
+        }
+
+      } else if (msg.type === 'loaded') {
+        loaded     = true
+        playing    = false
+        tokenTotal = msg.total
+
+        btnPlay.disabled     = false
+        btnBack.disabled     = false
+        btnBackSent.disabled = false
+        btnForward.disabled  = false
+        btn250.disabled      = false
+        btn400.disabled      = false
+        btn600.disabled      = false
+
+        // Show resume info or word count
+        const resumeAt = msg.startIndex ?? 0
+        if (resumeAt > 0) {
+          wordCount.textContent = `word ${resumeAt + 1} / ${tokenTotal}  (resuming)`
+          bandBottom.style.setProperty('--progress', ((resumeAt / tokenTotal) * 100).toFixed(1) + '%')
+        } else {
+          wordCount.textContent = tokenTotal + ' words'
+          bandBottom.style.setProperty('--progress', '0%')
+        }
+        wordCount.classList.add('visible')
+
+        // Apply config sent by panel
+        if (msg.wpm != null) {
+          baseWpm = msg.wpm
+          slider.value = msg.wpm
+          wpmCorner.textContent = msg.wpm + ' wpm'
+          syncPresetButtons(msg.wpm)
+        }
+        if (msg.fontSize != null) {
+          fontSize = msg.fontSize
+          document.documentElement.style.setProperty('--word-font-size', fontSize + 'rem')
+        }
+        if (msg.backStepWords != null) {
+          btnBack.textContent    = `← ${msg.backStepWords} words`
+          btnForward.textContent = `${msg.backStepWords} words →`
+        }
+
+        btnPlay.textContent = '▶ play'
+        showIdleCursor()
+      }
+    })
+
+    // ── Button handlers ──────────────────────────────────────────────────
+    btnPlay.addEventListener('click', () => {
+      if (!loaded) return
+      vscode.postMessage({ type: playing ? 'pause' : 'play' })
+    })
+    btnBack.addEventListener('click', () => {
+      if (!loaded) return
+      vscode.postMessage({ type: 'back' })
+    })
+    btnBackSent.addEventListener('click', () => {
+      if (!loaded) return
+      vscode.postMessage({ type: 'backSentence' })
+    })
+    btnForward.addEventListener('click', () => {
+      if (!loaded) return
+      vscode.postMessage({ type: 'forward' })
+    })
+
+    btn250.addEventListener('click', () => { baseWpm = 250; setWpm(250) })
+    btn400.addEventListener('click', () => { baseWpm = 400; setWpm(400) })
+    btn600.addEventListener('click', () => { baseWpm = 600; setWpm(600) })
+
+    slider.addEventListener('input', () => {
+      const val = +slider.value
+      baseWpm = val
+      wpmCorner.textContent = val + ' wpm'
+      syncPresetButtons(val)
+      vscode.postMessage({ type: 'wpm', value: val })
+    })
+
+    btnFontDn.addEventListener('click', () => setFontSize(fontSize - 0.3))
+    btnFontUp.addEventListener('click', () => setFontSize(fontSize + 0.3))
+    btnMode.addEventListener('click', toggleMode)
+
+    // ── Progress bar seeking ─────────────────────────────────────────────
+    bandBottom.addEventListener('click', e => {
+      if (!loaded) return
+      const rect = bandBottom.getBoundingClientRect()
+      const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+      const targetIndex = Math.floor(fraction * tokenTotal)
+      vscode.postMessage({ type: 'seek', value: targetIndex })
+    })
+
+    // ── Keyboard ─────────────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space') {
+        e.preventDefault()
+        if (!loaded) return
+        if (playing && !e.repeat) {
+          // Start hold-to-freeze detection (200 ms threshold)
+          spaceTimer = setTimeout(() => {
+            freezeHeld = true
+            vscode.postMessage({ type: 'pause' })
+          }, 200)
+        } else if (!playing && !freezeHeld && !e.repeat) {
+          vscode.postMessage({ type: 'play' })
+        }
+        return
+      }
+      if (!loaded) return
+      if (e.code === 'ArrowLeft') {
+        e.preventDefault()
+        vscode.postMessage({ type: e.shiftKey ? 'backSentence' : 'back' })
+      }
+      if (e.code === 'ArrowRight') {
+        e.preventDefault()
+        vscode.postMessage({ type: 'forward' })
+      }
+    })
+
+    document.addEventListener('keyup', e => {
+      if (e.code === 'Space') {
+        if (spaceTimer) { clearTimeout(spaceTimer); spaceTimer = null }
+        if (freezeHeld) {
+          // Release freeze — resume playback
+          freezeHeld = false
+          vscode.postMessage({ type: 'play' })
+        } else if (loaded && playing) {
+          // Short tap while playing — pause
+          vscode.postMessage({ type: 'pause' })
+        }
+      }
+    })
+  </script>
+</body>
+</html>

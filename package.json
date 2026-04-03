@@ -1,0 +1,155 @@
+{
+  "name": "rsvp-reader",
+  "displayName": "RSVP Reader",
+  "description": "Speed-read markdown files and selections with RSVP",
+  "version": "0.1.0",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "rsvp.readFile",
+        "title": "RSVP: Read File",
+        "icon": "$(play-circle)"
+      },
+      {
+        "command": "rsvp.readSelection",
+        "title": "RSVP: Read Selection"
+      },
+      {
+        "command": "rsvp.readWithPreview",
+        "title": "RSVP: Read with Preview",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "rsvp.togglePlayPause",
+        "title": "RSVP: Play / Pause"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "rsvp.readFile",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorFocus && resourceExtname == .md && !editorHasSelection"
+      },
+      {
+        "command": "rsvp.readSelection",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorFocus && editorHasSelection"
+      },
+      {
+        "command": "rsvp.togglePlayPause",
+        "key": "ctrl+shift+space",
+        "mac": "cmd+shift+space",
+        "when": "rsvpReaderActive"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "rsvp.readFile",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        },
+        {
+          "command": "rsvp.readWithPreview",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "rsvp.readFile",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        },
+        {
+          "command": "rsvp.readWithPreview",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        },
+        {
+          "command": "rsvp.readFile",
+          "when": "activeWebviewPanelId == 'markdown.preview' || rsvpReaderActive",
+          "group": "navigation"
+        },
+        {
+          "command": "rsvp.readWithPreview",
+          "when": "activeWebviewPanelId == 'markdown.preview' || rsvpReaderActive",
+          "group": "navigation"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "rsvp.readFile",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        },
+        {
+          "command": "rsvp.readWithPreview",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "rsvp.readSelection",
+          "when": "editorHasSelection",
+          "group": "navigation"
+        },
+        {
+          "command": "rsvp.readFile",
+          "when": "resourceExtname == .md && !editorHasSelection",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "RSVP Reader",
+      "properties": {
+        "rsvp.wpm": {
+          "type": "number",
+          "default": 250,
+          "description": "Words per minute"
+        },
+        "rsvp.backStepWords": {
+          "type": "number",
+          "default": 5,
+          "description": "Number of words to skip back with the ← back button"
+        },
+        "rsvp.fontSize": {
+          "type": "number",
+          "default": 3.0,
+          "description": "Word display font size in rem"
+        },
+        "rsvp.chunkSize": {
+          "type": "number",
+          "default": 1,
+          "description": "Number of words to display at once (reserved for v2)"
+        },
+        "rsvp.skipCodeBlocks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Skip code blocks when reading markdown"
+        }
+      }
+    }
+  },
+  "bin": {
+    "rsvp": "./out/cli.js"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./ && chmod +x out/cli.js",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}
