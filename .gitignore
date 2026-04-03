@@ -3,6 +3,4 @@ node_modules/
 *.vsix
 .DS_Store
 *.js.map
-stages/
-design-system/
 .vscode/

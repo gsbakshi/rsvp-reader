@@ -126,6 +126,8 @@ rsvp-reader/
 │   └── rsvp.html         webview UI
 ├── hooks/
 │   └── stop-hook.sh      reference hook script for cmux integration
+├── stages/               ICM development workflow (spec → scaffold → test → publish)
+├── design-system/        component catalog and design tokens
 ├── out/                  compiled output (gitignored)
 └── package.json
 ```
@@ -198,6 +200,12 @@ Finally, verify by running the hook manually:
 
 Report what worked, what was already configured, and anything that needs manual attention.
 ```
+
+---
+
+## Acknowledgements
+
+The development workflow in `stages/` is based on the **Interpreted Context Methodology (ICM)** by [Jake](https://github.com/RinDig/Interpreted-Context-Methdology), which defines a structured stage-gate pipeline for AI-assisted software development. The spec → scaffold → test → publish workflow used here is directly inspired by that work. If you find the workflow useful, go give his repo a star.
 
 ---
 
