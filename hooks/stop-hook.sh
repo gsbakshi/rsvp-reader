@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (c) 2026 Gurmehar Singh Bakshi
 # RSVP Stop hook — works with both Claude Code and Codex CLI.
 #
 # Claude Code  → add to ~/.claude/settings.json:

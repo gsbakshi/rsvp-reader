@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 Gurmehar Singh Bakshi
+
 export interface Token {
   word: string
   delayMultiplier: number // 1.0 normal, 1.1 pre-clause, 1.3 after clause, 1.8 after sentence

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 Gurmehar Singh Bakshi
 import type { Token } from './rsvpEngine'
 
 // NOTE: The spec calls for remark + strip-markdown, but those packages are

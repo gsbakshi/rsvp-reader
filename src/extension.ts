@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 Gurmehar Singh Bakshi
 import * as vscode from 'vscode'
 import { RsvpPanel } from './rsvpPanel'
 
