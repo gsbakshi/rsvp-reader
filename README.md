@@ -141,6 +141,32 @@ The CLI entry point (`src/cli.ts`) compiles to `out/cli.js` with a `#!/usr/bin/e
 
 ---
 
+## Agent Setup Prompt
+
+If you're using an AI coding agent (Claude Code, Codex CLI, etc.), paste this prompt to have it set up RSVP Reader automatically:
+
+```
+Set up the RSVP Reader project in this directory. Do the following steps in order:
+
+1. Run `npm install` to install dependencies.
+2. Run `npm run compile` to build the extension and CLI. Verify that `out/cli.js` exists and is executable.
+3. Run `npm link` to put the `rsvp` binary on PATH. Verify with `which rsvp`.
+4. Test the CLI: run `echo "this is a quick test of the rsvp command line reader" | rsvp` and confirm it renders words to the terminal.
+
+Then wire up the stop hooks so AI responses auto-play:
+
+5. For Claude Code — add the Stop hook to `~/.claude/settings.json`. The hook command should be the absolute path to `hooks/stop-hook.sh` in this repo. Check if a hooks section already exists before adding.
+6. For Codex CLI — add `[features]\ncodex_hooks = true` to `~/.codex/config.toml` if not already present. Then create or update `~/.codex/hooks.json` with a Stop entry pointing to the same `hooks/stop-hook.sh`.
+7. Make sure `hooks/stop-hook.sh` is executable (`chmod +x`).
+
+Finally, verify by running the hook manually:
+`echo '{"stop_reason":"end_turn","last_assistant_message":"This is a test message that is long enough to trigger the RSVP reader because it has more than thirty words in it and should open automatically."}' | hooks/stop-hook.sh stop`
+
+Report what worked, what was already configured, and anything that needs manual attention.
+```
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE)
