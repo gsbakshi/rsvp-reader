@@ -4,8 +4,12 @@
   "description": "Speed-read markdown files and selections with RSVP",
   "version": "0.1.0",
   "license": "GPL-3.0-only",
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Other"],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
@@ -124,7 +128,7 @@
         },
         "rsvp.fontSize": {
           "type": "number",
-          "default": 3.0,
+          "default": 3,
           "description": "Word display font size in rem"
         },
         "rsvp.chunkSize": {
@@ -145,12 +149,19 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./ && chmod +x out/cli.js",
-    "watch": "tsc -watch -p ./"
+    "compile": "npm run compile:ext && npm run typecheck:webview && npm run compile:webview",
+    "compile:ext": "tsc -p ./ && chmod +x out/cli.js",
+    "typecheck:webview": "tsc -p tsconfig.webview.json",
+    "compile:webview": "esbuild src/webview/main.ts --bundle --format=iife --target=es2020 --outfile=media/rsvp.js",
+    "watch": "npm-run-all --parallel watch:ext watch:webview",
+    "watch:ext": "tsc -watch -p ./",
+    "watch:webview": "esbuild src/webview/main.ts --bundle --format=iife --target=es2020 --outfile=media/rsvp.js --watch"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.25.12",
+    "npm-run-all": "^4.1.5",
     "typescript": "^5.3.0"
   }
 }

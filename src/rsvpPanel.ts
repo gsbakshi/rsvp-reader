@@ -7,6 +7,7 @@ import * as path from 'path'
 import { RsvpEngine } from './rsvpEngine'
 import { parseMarkdown } from './mdParser'
 import type { Token, EngineState } from './rsvpEngine'
+import type { ExtensionToWebview, WebviewToExtension } from './webview-protocol'
 
 function getNonce(): string {
   return crypto.randomBytes(24).toString('base64url')
@@ -48,7 +49,7 @@ export class RsvpPanel {
           this.revealEditorLine(index)
         }
         RsvpPanel.updateStatusBar('playing', index + 1, total)
-        void this.panel.webview.postMessage({
+        this.postToWebview({
           type: 'token',
           word: token.word,
           progress: index / total,
@@ -64,14 +65,14 @@ export class RsvpPanel {
         if (state === 'done' && RsvpPanel.context && this.fileUri) {
           void RsvpPanel.context.workspaceState.update(`rsvp.pos.${this.fileUri.fsPath}`, 0)
         }
-        void this.panel.webview.postMessage({ type: 'state', state })
+        this.postToWebview({ type: 'state', state })
       },
       wpm
     )
 
     this.panel.webview.html = this.buildHtml()
     this.panel.webview.onDidReceiveMessage(
-      (msg: { type: string; value?: number }) => this.handleMessage(msg),
+      (msg: WebviewToExtension) => this.handleMessage(msg),
       null,
       this.disposables
     )
@@ -219,7 +220,7 @@ export class RsvpPanel {
     this.engineState = 'idle'
     RsvpPanel.updateStatusBar('idle', startIndex, tokens.length)
 
-    void this.panel.webview.postMessage({
+    this.postToWebview({
       type: 'loaded',
       total: tokens.length,
       startIndex,
@@ -229,7 +230,12 @@ export class RsvpPanel {
     })
   }
 
-  private handleMessage(msg: { type: string; value?: number }): void {
+  /** Type-safe wrapper around the webview postMessage channel. */
+  private postToWebview(msg: ExtensionToWebview): void {
+    void this.panel.webview.postMessage(msg)
+  }
+
+  private handleMessage(msg: WebviewToExtension): void {
     const config = vscode.workspace.getConfiguration('rsvp')
     switch (msg.type) {
       case 'play':  this.engine.play();   break
@@ -244,21 +250,15 @@ export class RsvpPanel {
         this.engine.backToSentence()
         break
       case 'seek':
-        if (msg.value !== undefined) {
-          this.engine.seek(msg.value)
-          this.savePosition()
-        }
+        this.engine.seek(msg.value)
+        this.savePosition()
         break
       case 'wpm':
-        if (msg.value !== undefined) {
-          this.engine.setWpm(msg.value)
-          void config.update('wpm', msg.value, true)
-        }
+        this.engine.setWpm(msg.value)
+        void config.update('wpm', msg.value, true)
         break
       case 'fontSize':
-        if (msg.value !== undefined) {
-          void config.update('fontSize', msg.value, true)
-        }
+        void config.update('fontSize', msg.value, true)
         break
     }
   }
@@ -323,12 +323,19 @@ export class RsvpPanel {
     }
   }
 
-  // Reads media/rsvp.html and injects a per-session CSP nonce.
+  // Reads media/rsvp.html and injects a per-session CSP nonce plus the
+  // webview-resolved URI of the bundled webview script (media/rsvp.js,
+  // produced by `npm run compile:webview`).
   private buildHtml(): string {
     const nonce = getNonce()
     const htmlPath = path.join(this.extensionUri.fsPath, 'media', 'rsvp.html')
     const template = fs.readFileSync(htmlPath, 'utf8')
-    return template.replace(/\{\{nonce\}\}/g, nonce)
+    const scriptUri = this.panel.webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'media', 'rsvp.js')
+    )
+    return template
+      .replace(/\{\{nonce\}\}/g, nonce)
+      .replace(/\{\{scriptUri\}\}/g, scriptUri.toString())
   }
 
   private dispose(): void {
