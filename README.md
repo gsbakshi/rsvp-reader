@@ -150,7 +150,7 @@ The CLI entry point (`src/cli.ts`) compiles to `out/cli.js` with a `#!/usr/bin/e
 We're moving fast. Here's what's coming:
 
 - **VS Code Marketplace** — official published extension (no manual install)
-- **cmux native plugin** — first-class cmux integration, no hook wiring required
+- **Deeper cmux integration** — `cmux.json` command-palette entries and socket-API-driven pane control, so RSVP can open and load programmatically without depending on the Stop hook (cmux has no plugin runtime — extensibility is CLI + sockets + config; see [cmux automation docs](https://cmux.com/docs))
 - **Claude Code & Codex CLI** — deeper integration beyond stop hooks
 - **Rust rewrite** — faster rendering, lower latency, single binary distribution
 - **Visualization research** — exploring alternatives to the current ORP/RSVP algorithm, including different reading acceleration techniques
