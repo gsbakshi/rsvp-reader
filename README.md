@@ -68,7 +68,7 @@ rsvp --wpm=350 file.md    # custom speed
 
 ### cmux Auto-play
 
-When running inside [cmux](https://cmux.app), Claude Code and Codex CLI responses are automatically played after each turn (if >30 words). The RSVP panel opens as a right split of your current surface and closes automatically when the next response arrives.
+When running inside [cmux](https://cmux.com), Claude Code and Codex CLI responses are automatically played after each turn (if >30 words). The RSVP panel opens as a right split of your current surface and closes automatically when the next response arrives.
 
 **Requirements:**
 - `rsvp` on PATH (`npm link`)
